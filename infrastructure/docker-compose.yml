@@ -1,0 +1,47 @@
+version: '3'
+networks:
+  application:
+    driver: bridge
+volumes:
+  mongodb-data:
+
+services:
+  btp-mongo:
+    image: mongo
+    restart: always
+    container_name: btp-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+      - ./backup:/data/db/backup
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  btp-backend:
+    container_name: btp-go-backend
+    build:
+      context: ../backend
+      dockerfile: ./Docker/Dockerfile
+    depends_on:
+      - btp-mongo
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../backend:/go/src/backend
+    networks:
+      - application
+
+  btp-frontend:
+    container_name: btp-react-frontend
+    build:
+      context: ../frontend
+      dockerfile: ./Docker/Dockerfile
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - application
