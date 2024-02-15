@@ -145,6 +145,54 @@ func GetBtpHistory(id string) ([]bson.M, error) {
 	}
 	return results, nil
 }
+func GetBotHistory(id string) ([]bson.M, error) {
+	// Your MongoDB database and collection names
+	// databaseName := "yourDatabase"
+	collectionName := "bot"
+
+	collection := Database.Collection(collectionName)
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "ISIN", Value: id}}}}
+
+	// Print the matchStage
+	// fmt.Println(matchStage)
+
+	// sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "$natural", Value: 1}}}}
+	// addFieldsStage := bson.D{{Key: "$addFields", Value: bson.D{
+	// 	{Key: "insertionDate", Value: bson.D{
+	// 		{Key: "$toDate", Value: bson.D{
+	// 			{Key: "$multiply", Value: bson.A{
+	// 				bson.D{{Key: "$toLong", Value: "$_id"}},
+	// 				1000,
+	// 			}},
+	// 		}},
+	// 	}},
+	// }}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "name", Value: "$InsertionDate"},
+		{Key: "value", Value: "$Last"},
+		// Add more fields as needed
+	}}}
+
+	// Aggregation pipeline
+	pipeline := mongo.Pipeline{matchStage, projectStage}
+
+	cursor, err := collection.Aggregate(context.TODO(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var results []bson.M
+	if err := cursor.All(context.TODO(), &results); err != nil {
+		return nil, err
+	}
+	// return results
+	for _, result := range results {
+		fmt.Println(result)
+	}
+	return results, nil
+}
 func Insert_element(collectionName string, got any) error {
 	collection := Database.Collection(collectionName)
 	log.Println((got))

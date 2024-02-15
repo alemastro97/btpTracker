@@ -346,7 +346,52 @@ var numCPU = runtime.NumCPU() * 2
 //		json_string, err := json.Marshal(trees)
 //		w.Write(json_string)
 //	}
+func retrieveBOTData() []TableRow {
+	log.Println("Start Retrieving")
+	var rows []TableRow
 
+	c := colly.NewCollector()
+	// Set up rules for data extraction
+	c.OnHTML("tr", func(row *colly.HTMLElement) {
+		// Create a new TableRow object for each row
+		tableRow := TableRow{}
+
+		// Extract data from each column (td) in the row
+		row.ForEach("td", func(colIdx int, col *colly.HTMLElement) {
+			cellText := strings.TrimSpace(strings.ReplaceAll(col.Text, "\n", ""))
+
+			switch colIdx {
+			case 0:
+				tableRow.ISIN = strings.Trim(strings.Split(cellText, "-")[0], " ")
+			case 1:
+				tableRow.Description = cellText
+			case 2:
+				tableRow.Last = cellText
+			case 3:
+				tableRow.Cedola = cellText
+			case 4:
+				tableRow.Expiration = cellText
+			}
+		})
+
+		// Append the TableRow object to the slice
+		rows = append(rows, tableRow)
+	})
+
+	// c.OnHTML("p", func(e *colly.HTMLElement) {
+	// 	fmt.Println("Paragraph:", e.Text)
+	// })
+
+	// for i := 1; i <= 7; i++ {
+	// Set the URL to be scraped
+	err := c.Visit("https://www.borsaitaliana.it/borsa/obbligazioni/mot/bot/lista.html?&page=" + fmt.Sprint(1) + "#")
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	// }
+	log.Println(rows)
+	return rows
+}
 func retrieveData() []TableRow {
 	log.Println("Start Retrieving")
 	var rows []TableRow
@@ -414,6 +459,27 @@ func getBTPData(w http.ResponseWriter, r *http.Request) {
 	// Write the JSON response
 	w.Write(responseJSON)
 }
+func getBOTData(w http.ResponseWriter, r *http.Request) {
+	log.Println("InsideBTP")
+	(w).Header().Set("Access-Control-Allow-Origin", "*")
+
+	queryValues := r.URL.Query()
+
+	// Get the id of the paper to retrieve.
+	id := queryValues["id"][0]
+	log.Println(id)
+	res, err := database.GetBotHistory(id)
+	responseJSON, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+		return
+	}
+	// Set the Content-Type header to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON response
+	w.Write(responseJSON)
+}
 func getRTData(w http.ResponseWriter, r *http.Request) {
 	// Enable CORS.
 	(w).Header().Set("Access-Control-Allow-Origin", "*")
@@ -421,6 +487,28 @@ func getRTData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("rows")
 	rows = retrieveData()
+
+	log.Println(rows)
+
+	responseJSON, err := json.Marshal(rows)
+	if err != nil {
+		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+		return
+	}
+	// Set the Content-Type header to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON response
+	w.Write(responseJSON)
+}
+
+func getRTBOTData(w http.ResponseWriter, r *http.Request) {
+	// Enable CORS.
+	(w).Header().Set("Access-Control-Allow-Origin", "*")
+	var rows []TableRow
+
+	log.Println("rows")
+	rows = retrieveBOTData()
 
 	log.Println(rows)
 
@@ -464,9 +552,12 @@ func main() {
 	database.Insert_element("btp", TableRow{})
 
 	database.Database.Collection("bot")
+	database.Insert_element("bot", TableRow{})
 
 	http.HandleFunc("/getRTData", getRTData)
 	http.HandleFunc("/getBTPData", getBTPData)
+	http.HandleFunc("/getRTBOTData", getRTBOTData)
+	http.HandleFunc("/getBOTData", getBOTData)
 
 	// Start the HTTP server in a goroutine
 	go func() {
@@ -486,6 +577,24 @@ func main() {
 		for _, r := range rows {
 			log.Println(r)
 			err := database.Insert_element("btp", DbRow{
+				ISIN:          r.ISIN,
+				Description:   r.Description,
+				Last:          r.Last,
+				Cedola:        r.Cedola,
+				Expiration:    r.Expiration,
+				InsertionDate: time.Now(),
+			})
+			if err != nil {
+				fmt.Println("Error:", err)
+			}
+		}
+
+		var rows_bot []TableRow
+
+		rows_bot = retrieveBOTData()
+		for _, r := range rows_bot {
+			log.Println(r)
+			err := database.Insert_element("bot", DbRow{
 				ISIN:          r.ISIN,
 				Description:   r.Description,
 				Last:          r.Last,
