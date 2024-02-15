@@ -33,15 +33,15 @@ services:
     networks:
       - application
 
-  btp-frontend:
-    container_name: btp-react-frontend
-    build:
-      context: ../frontend
-      dockerfile: ./Docker/Dockerfile
-    volumes:
-      - ../frontend:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    networks:
-      - application
+  # btp-frontend:
+  #   container_name: btp-angular-frontend
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: ./Docker/Dockerfile
+  #   volumes:
+  #     - ../frontend:/app
+  #     - /app/node_modules
+  #   ports:
+  #     - "4200:4200"
+  #   networks:
+  #     - application
