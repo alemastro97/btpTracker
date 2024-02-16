@@ -19,7 +19,7 @@ import { BrowserModule } from '@angular/platform-browser';
   template: `
   <div>
     <div class="h-[50px] flex justify-between items-center px-5 bg-[#11161e]">
-    <div class="text-white font-black text-lg">BTP Tracker</div>  
+    <div class="text-white font-black text-lg" (click)="changeRoute('/')">BTP Tracker</div>  
     <div class="flex justify-center items-center gap-4">
         
   <div class="border rounded-md py-1 px-4 text-white border-[#784fbe] bg-[#1f2836]" routerLink="/btp" (click)="changeRoute('btp')" routerLinkActive="active">BTP</div>
